@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const { validateTx } = require("./utils");
 const port = 3042;
 
 app.use(cors());
@@ -10,6 +11,7 @@ const balances = {
   "0x1": 100,
   "0x2": 50,
   "0x3": 75,
+  "0x748e810d090a036a": 10000,
 };
 
 app.get("/balance/:address", (req, res) => {
@@ -19,17 +21,21 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { sender, recipient, amount } = req.body;
+  const { signature, publicKey, ...tx } = req.body;
 
-  setInitialBalance(sender);
-  setInitialBalance(recipient);
+  const { valid, address } = validateTx(tx, signature, publicKey);
 
-  if (balances[sender] < amount) {
+  setInitialBalance(tx.sender);
+  setInitialBalance(tx.recipient);
+
+  if (!valid || address !== tx.sender) {
+    res.status(400).send({ message: "Invalid signature!" });
+  } else if (balances[tx.sender] < tx.amount) {
     res.status(400).send({ message: "Not enough funds!" });
   } else {
-    balances[sender] -= amount;
-    balances[recipient] += amount;
-    res.send({ balance: balances[sender] });
+    balances[tx.sender] -= tx.amount;
+    balances[tx.recipient] += tx.amount;
+    res.send({ balance: balances[tx.sender] });
   }
 });
 
