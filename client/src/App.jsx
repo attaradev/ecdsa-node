@@ -29,6 +29,7 @@ function App() {
 
   useEffect(() => { 
     const getBalance = async () => {
+      if (!address) return;
       const {data} = await server.get(`balance/${address}`);
       setBalance(data.balance);
     };
